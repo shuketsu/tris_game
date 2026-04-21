@@ -1,4 +1,4 @@
-project documentation
+project documentation (or better readme file)
 
 language [italian]
 
