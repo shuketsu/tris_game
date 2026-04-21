@@ -1,0 +1,104 @@
+project documentation
+
+language [italian]
+
+Tris (user vc PC )
+
+Obiettivi
+
+   - Implementare la logica di gioco del Tris.
+
+   - Gestire l'input dell'utente tramite i tasti freccia e la barra spaziatrice.
+
+   - Creare un'interfaccia grafica minimale basata su terminale.
+
+   - Implementare un avversario (computer) con mosse generate casualmente.
+
+   - Gestire le condizioni di vittoria, sconfitta e pareggio.
+
+Strumenti utilizzati
+
+   - Linguaggio di programmazione: C.
+
+   - Librerie:
+
+       + ncurses.h: per la gestione avanzata del terminale, posizionamento del cursore e input da tastiera.
+
+       + stdlib.h e time.h: per la generazione di numeri casuali (mossa del computer).
+
+       + stdbool.h: per l'utilizzo di variabili booleane.
+
+   - Compilatore: GCC (con flag -lncurses)
+
+Descrizione del problema
+
+Il progetto richiede la creazione di una griglia 3×3 dove un utente e un computer si alternano per posizionare 
+i propri simboli ('X' e 'O'). L'utente deve poter navigare nella griglia graficamente e confermare la
+propria mossa. Il sistema deve verificare dopo ogni turno se esiste un vincitore o se la griglia è completa.
+
+Analisi del problema
+
+Per risolvere il problema, il programma è stato suddiviso in tre parti logiche:
+
+   - Rappresentazione dei dati: Una matrice di interi dove 0 indica una cella vuota, 1 l'utente e 2 il computer.
+
+   - Interfaccia Utente: Disegno della griglia e gestione del "cursore" (rappresentato dal carattere ?) che si 
+     sposta senza sovrascrivere le mosse già effettuate.
+
+   - Logica di controllo: Algoritmo che analizza righe, colonne e diagonali della matrice per trovare tre 
+     simboli uguali consecutivi.
+
+Progettazione (strutture dati e funzioni)
+
+   - Matrice Mx[SQUARE][SQUARE]: Struttura dati principale per memorizzare lo stato del gioco.
+
+   - Funzione gm_space(int x, int y): Si occupa di disegnare graficamente i bordi della griglia sul terminale 
+     utilizzando i caratteri | e -.
+
+   - Funzione game_control(int size, int Mx[size][size]): Analizza la matrice e restituisce:
+
+        1 se vince l'utente.
+
+        2 se vince il computer.
+
+        0 se non c'è ancora un vincitore.
+
+   - Main Loop: Un ciclo do-while che legge l'input (tasti freccia per il movimento, SPACE per segnare la mossa) 
+    e aggiorna lo stato della partita.
+
+Implementazione
+
+Il codice utilizza le funzioni di ncurses come mvaddch() per posizionare i caratteri in coordinate specifiche 
+(y,x).
+
+   - Il movimento dell'utente è gestito da uno switch sui codici KEY_UP, KEY_DOWN, ecc.
+
+   - La mossa del computer è implementata con un ciclo do-while che tenta di generare coordinate casuali finché 
+     non trova una cella libera (Mx[bot_y][bot_x] == 0).
+
+   - I colori non sono esplicitamente definiti tramite init_pair nel codice fornito, ma la distinzione tra i 
+     giocatori è garantita dall'uso di caratteri diversi ('X' e 'O').
+
+Risultati ottenuti
+
+Il programma permette una partita fluida tra un giocatore umano e un'intelligenza artificiale basata su 
+casualità. L'interfaccia risponde correttamente ai comandi della tastiera e notifica correttamente l'esito della 
+partita (vincita o perdita) a lato della griglia di gioco.
+
+Problemi riscontrati e soluzioni
+
+   - Gestione del cursore: Inizialmente il cursore poteva sovrascrivere visivamente le mosse già fatte. 
+     Soluzione: È stata aggiunta una logica di controllo che ripristina il carattere 'X' o 'O' quando il cursore 
+     ? si sposta da una cella occupata.
+
+   - Collisioni del Computer: Il computer potrebbe tentare di giocare in una cella già occupata. 
+     Soluzione: Utilizzo di un ciclo di validazione rand() che continua finché non viene trovata una cella con 
+     valore 0.
+
+   - Uscita dai bordi: Rischio di errore out of bounds nella matrice durante lo spostamento con le frecce. 
+     Soluzione: Inserimento di controlli if(y - 1 >= 0) e logiche di "salto" alla cella libera successiva.
+
+Conclusioni:
+L'esperienza ha permesso di approfondire la gestione dell'input non bloccante e la manipolazione del terminale 
+tramite ncurses. Sebbene l'IA del computer sia basata sulla fortuna, la struttura del codice è solida e 
+facilmente espandibile, ad esempio implementando l'algoritmo Minimax per rendere il computer imbattibile.

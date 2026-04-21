@@ -3,213 +3,131 @@
 #include <stdlib.h>
 #include <time.h>
 #include <stdbool.h>
+
 #define SQUARE 3
-#define X 5
-#define Y X
+#define OFFSET_X 4
+#define OFFSET_Y 2
 
-void gm_space(int x, int y){
+#define COLOR_USER 1
+#define COLOR_BOT 2
+#define COLOR_CURSOR 3
+#define COLOR_BOARD 4
 
-	char ch1 = '|';
-	char ch2 = '-';
-	for(int i = 0; i < y; i++){
-		for(int j = 0; j < x; j++){
-			if (j % 2 != 0 && i % 2 == 0) {
-				mvaddch(i, j, ch1);
-			}
-			if(i % 2 != 0){
-				mvaddch(i, j, ch2);
-			}
-		}
-		printw("\n");
-	}
-	move(0, 0);
+void init_colors() {
+    start_color();
+    init_pair(COLOR_USER, COLOR_BLUE, COLOR_BLACK);
+    init_pair(COLOR_BOT, COLOR_RED, COLOR_BLACK);
+    init_pair(COLOR_CURSOR, COLOR_YELLOW, COLOR_BLACK);
+    init_pair(COLOR_BOARD, COLOR_WHITE, COLOR_BLACK);
 }
 
-int game_control(int size, int Mx[size][size]){
+void draw_board() {
+    attron(COLOR_PAIR(COLOR_BOARD));
+    for(int i = 0; i <= SQUARE * OFFSET_Y; i += OFFSET_Y) {
+        mvhline(i, 0, '-', SQUARE * OFFSET_X);
+    }
+    for(int j = 0; j <= SQUARE * OFFSET_X; j += OFFSET_X) {
+        mvvline(0, j, '|', SQUARE * OFFSET_Y);
+    }
+    for(int i = 0; i <= SQUARE * OFFSET_Y; i += OFFSET_Y) {
+        for(int j = 0; j <= SQUARE * OFFSET_X; j += OFFSET_X) {
+            mvaddch(i, j, '+');
+        }
+    }
+    attroff(COLOR_PAIR(COLOR_BOARD));
+}
 
-        for(int i = 0; i < size; i++){
-                if (Mx[i][0] != 0 && Mx[i][0] == Mx[i][1] && Mx[i][1] == Mx[i][2]) {
-                        return Mx[i][0];
+int game_control(int Mx[SQUARE][SQUARE]) {
+    for(int i = 0; i < SQUARE; i++) {
+        if (Mx[i][0] != 0 && Mx[i][0] == Mx[i][1] && Mx[i][1] == Mx[i][2]) return Mx[i][0];
+        if (Mx[0][i] != 0 && Mx[0][i] == Mx[1][i] && Mx[1][i] == Mx[2][i]) return Mx[0][i];
+    }
+    if (Mx[0][0] != 0 && Mx[0][0] == Mx[1][1] && Mx[1][1] == Mx[2][2]) return Mx[0][0];
+    if (Mx[0][2] != 0 && Mx[0][2] == Mx[1][1] && Mx[1][1] == Mx[2][0]) return Mx[0][2];
+    return 0;
+}
+
+int main() {
+    initscr();
+    cbreak();
+    noecho();
+    keypad(stdscr, TRUE);
+    curs_set(0);
+    init_colors();
+    srand(time(NULL));
+
+    int Mx[SQUARE][SQUARE] = {0};
+    int x = 0, y = 0;
+    int ch;
+    bool game_running = true;
+    int empty_cells = SQUARE * SQUARE;
+
+    draw_board();
+
+    while(game_running) {
+        for(int i = 0; i < SQUARE; i++) {
+            for(int j = 0; j < SQUARE; j++) {
+                int py = i * OFFSET_Y + (OFFSET_Y / 2);
+                int px = j * OFFSET_X + (OFFSET_X / 2);
+                
+                if (Mx[i][j] == 1) {
+                    attron(COLOR_PAIR(COLOR_USER) | A_BOLD);
+                    mvaddch(py, px, 'X');
+                    attroff(COLOR_PAIR(COLOR_USER) | A_BOLD);
+                } else if (Mx[i][j] == 2) {
+                    attron(COLOR_PAIR(COLOR_BOT) | A_BOLD);
+                    mvaddch(py, px, 'O');
+                    attroff(COLOR_PAIR(COLOR_BOT) | A_BOLD);
+                } else {
+                    mvaddch(py, px, ' ');
                 }
-                if (Mx[0][i] != 0 && Mx[0][i] == Mx[1][i] && Mx[1][i] == Mx[2][i]) {
-                        return Mx[0][i];
+
+                if (i == y && j == x) {
+                    attron(COLOR_PAIR(COLOR_CURSOR) | A_REVERSE);
+                    mvaddch(py, px, (Mx[i][j] == 0) ? '?' : (Mx[i][j] == 1 ? 'X' : 'O'));
+                    attroff(COLOR_PAIR(COLOR_CURSOR) | A_REVERSE);
                 }
+            }
         }
 
-        if (Mx[0][0] != 0 && Mx[0][0] == Mx[1][1] && Mx[1][1] == Mx[2][2]) {
-                return Mx[0][0];
+        int winner = game_control(Mx);
+        if (winner != 0 || empty_cells == 0) {
+            move(SQUARE * OFFSET_Y + 1, 0);
+            if (winner == 1) printw("--- COMPLIMENTI! HAI VINTO! ---");
+            else if (winner == 2) printw("--- PECCATO! HAI PERSO! ---");
+            else printw("--- PAREGGIO! ---");
+            refresh();
+            getch();
+            break;
         }
 
-        if (Mx[0][2] != 0 && Mx[0][2] == Mx[1][1] && Mx[1][1] == Mx[2][0]) {
-                return Mx[0][2];
+        ch = getch();
+        switch(ch) {
+            case KEY_UP:    if (y > 0) y--; break;
+            case KEY_DOWN:  if (y < SQUARE - 1) y++; break;
+            case KEY_LEFT:  if (x > 0) x--; break;
+            case KEY_RIGHT: if (x < SQUARE - 1) x++; break;
+            case ' ': 
+                if (Mx[y][x] == 0) {
+                    Mx[y][x] = 1;
+                    empty_cells--;
+                    
+                    if (empty_cells > 0 && game_control(Mx) == 0) {
+                        int bx, by;
+                        do {
+                            bx = rand() % SQUARE;
+                            by = rand() % SQUARE;
+                        } while(Mx[by][bx] != 0);
+                        Mx[by][bx] = 2;
+                        empty_cells--;
+                    }
+                }
+                break;
+            case 'q': game_running = false; break;
         }
+        refresh();
+    }
 
-        return 0;
+    endwin();
+    return 0;
 }
-
-int main(){
-
-	initscr();
-	cbreak();
-	noecho();
-	keypad(stdscr, TRUE);
-
-	int ch;
-	int x = 0;
-	int y = 0;
-	int bot_y;
-	int bot_x;
-	int bot_steps = (SQUARE * SQUARE) / 2;
-	bool game_trigger = true;
-	char user_move = 'X';
-	char bot_move = 'O';
-	char user = '?';
-	char clean = ' ';
-	move(x, y);
-	srand(time(NULL));
-
-	int Mx[SQUARE][SQUARE] = {0};
-
-	gm_space(X, Y);
-
-	do {
-		ch = getch();
-		if (Mx[y][x] == 0) mvaddch(y * 2, x * 2, clean);
-		else {
-			if (Mx[y][x] == 1) mvaddch(y * 2, x * 2, user_move);
-			else mvaddch(y * 2, x * 2, bot_move);
-		}
-
-		refresh();
-		switch (ch){
-		case KEY_UP:
-			if(y - 1 >= 0 && Mx[y - 1][x] == 0){
-				y--;
-				mvaddch(y * 2, x * 2, user);
-			} else if(y - 1 >= 0){
-				for(int i = 0; i < SQUARE; i++){
-					if(Mx[y - 1][i] == 0){
-						y--;
-						x = i;
-						mvaddch(y * 2, x * 2, user);
-						break;
-					}
-				}
-			} else if (y == SQUARE - 1) {
-				for(int i = 0; i < SQUARE; i++){
-					if(Mx[0][i] == 0){
-						y = 0;
-						x = i;
-						mvaddch(y * 2, x * 2, user);
-						break;
-					}
-				}
-			}
-			break;
-		case KEY_DOWN:
-			if(y + 1 < SQUARE && Mx[y + 1][x] == 0){
-				y++;
-				mvaddch(y * 2, x * 2, user);
-			} else if (y + 1 < SQUARE){
-				for(int i = 0; i < SQUARE; i++){
-					if(Mx[y + 1][i] == 0){
-						y++;
-						x = i;
-						mvaddch(y * 2, x * 2, user);
-						break;
-					}
-				}
-			} else if (y == 0){
-				for(int i = 0; i < SQUARE; i++){
-					if(Mx[SQUARE - 1][i] == 0){
-						y = SQUARE - 1;
-						x = i;
-						mvaddch(y * 2, x * 2, user);
-						break;
-					}
-				}
-			}
-			break;
-		case KEY_LEFT:
-			if (x - 1 >= 0 && Mx[y][x - 1] == 0){
-				x--;
-				mvaddch(y * 2, x * 2, user);
-			} else if(x - 1 >= 0){
-				for(int i = 0; i < SQUARE; i++){
-					if(Mx[i][x - 1] == 0){
-						x--;
-						y = i;
-						mvaddch(y * 2, x * 2, user);
-						break;
-					}
-				}
-			} else if(x == SQUARE - 1){
-				for(int i = 0; i < SQUARE; i++){
-					if(Mx[i][0] == 0){
-						x = 0;
-						y = i;
-						mvaddch(y * 2, x * 2, user);
-						break;
-					}
-				}
-			}
-			break;
-		case KEY_RIGHT:
-			if(x + 1 < SQUARE && Mx[y][x + 1] == 0){
-				x++;
-				mvaddch(y * 2, x * 2, user);
-			} else if (x + 1 < SQUARE){
-				for(int i = 0; i < SQUARE; i++){
-					if(Mx[i][x + 1] == 0){
-						x++;
-						y = i;
-						mvaddch(y * 2, x * 2, user);
-						break;
-					}
-				}
-			} else if (x == 0){
-				for(int i = 0; i < SQUARE; i++){
-					if(Mx[i][SQUARE - 1] == 0){
-						x = SQUARE - 1;
-						y = i;
-						mvaddch(y * 2, x * 2, user);
-						break;
-					}
-				}
-			}
-			break;
-		case ' ':
-			if (Mx[y][x] == 0) {
-				mvaddch(y * 2, x * 2, user_move);
-				Mx[y][x] = 1;
-				if(bot_steps != 0){
-					do {
-						bot_x = rand() % SQUARE;
-						bot_y = rand() % SQUARE;
-					} while(Mx[bot_y][bot_x] != 0);
-					Mx[bot_y][bot_x] = 2;
-					mvaddch(bot_y * 2, bot_x * 2, bot_move);
-					bot_steps--;
-				}
-			}
-			break;
-		}
-
-		if (Mx[y][x] == 0) mvaddch(y * 2, x * 2, user);
-		if (game_control(SQUARE, Mx) != 0){
-			if(game_control(SQUARE, Mx) == 1){
-				move(0, X + 1);
-				printw("you win");
-				game_trigger = false;
-			} else {
-				move (0, X + 1);
-				printw("you lose");
-				game_trigger = false;
-			}
-		}
-	} while(game_trigger == true);
-
-	getch();
-	endwin();
-}
-
